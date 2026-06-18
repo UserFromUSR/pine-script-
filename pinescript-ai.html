@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PineAI — Pine Script v5 Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080c14;
+  --surface: #0d1420;
+  --surface2: #111928;
+  --border: #1e2d45;
+  --border2: #243450;
+  --blue: #2962ff;
+  --blue-dim: #1a3d99;
+  --blue-glow: rgba(41,98,255,0.15);
+  --cyan: #00e5ff;
+  --green: #00e676;
+  --amber: #ffd740;
+  --red: #ff5252;
+  --text: #e8edf5;
+  --text2: #7a8aa8;
+  --text3: #3d5070;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+/* ─── LAYOUT ─── */
+.shell { display: grid; grid-template-rows: 52px 1fr; grid-template-columns: 220px 1fr 380px; height: 100vh; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: relative;
+  z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand-mark {
+  width: 30px; height: 30px; border-radius: 7px;
+  background: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.brand-mark svg { width: 16px; height: 16px; }
+.brand-name { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+.brand-name span { color: var(--blue); }
+
+.topbar-center { display: flex; gap: 4px; }
+.tab {
+  font-size: 12px; padding: 5px 14px; border-radius: 6px;
+  color: var(--text2); cursor: pointer; font-family: var(--sans);
+  background: none; border: none; transition: all 0.15s;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--blue); background: var(--blue-glow); }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.pill {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border2); color: var(--text2);
+  background: none; cursor: pointer; font-family: var(--sans);
+  transition: all 0.15s;
+}
+.pill:hover { border-color: var(--blue); color: var(--blue); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-section { padding: 16px 14px 8px; }
+.sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
+
+.new-btn {
+  width: 100%; padding: 8px 12px; border-radius: 8px;
+  background: var(--blue); border: none; color: white;
+  font-size: 12px; font-family: var(--sans); font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s; margin-bottom: 16px;
+}
+.new-btn:hover { background: #3d74ff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(41,98,255,0.3); }
+.new-btn svg { width: 13px; height: 13px; }
+
+.preset-list { display: flex; flex-direction: column; gap: 2px; }
+.preset-item {
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  font-size: 12px; color: var(--text2); transition: all 0.12s;
+  display: flex; align-items: center; gap: 8px;
+}
+.preset-item:hover { background: var(--surface2); color: var(--text); }
+.preset-item.active { background: var(--blue-glow); color: var(--blue); }
+.preset-icon { font-size: 14px; flex-shrink: 0; }
+
+.sidebar-divider { height: 1px; background: var(--border); margin: 12px 14px; }
+
+.history-list { flex: 1; overflow-y: auto; padding: 0 8px 16px; }
+.history-item {
+  padding: 9px 10px; border-radius: 7px; cursor: pointer;
+  font-size: 11px; color: var(--text2); transition: all 0.12s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid transparent;
+}
+.history-item:hover { background: var(--surface2); color: var(--text); }
+
+/* ─── CHAT ─── */
+.chat-wrap {
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.messages {
+  flex: 1; overflow-y: auto; padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 20px;
+  scroll-behavior: smooth;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.msg-row { display: flex; gap: 12px; max-width: 680px; }
+.msg-row.user { flex-direction: row-reverse; margin-left: auto; }
+
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0; font-family: var(--sans);
+}
+.avatar.ai { background: var(--blue-glow); border: 1px solid var(--blue-dim); color: var(--blue); }
+.avatar.user { background: #1a3020; border: 1px solid #2a5030; color: var(--green); }
+
+.bubble {
+  padding: 12px 16px; border-radius: 12px;
+  font-size: 13.5px; line-height: 1.65;
+  border: 1px solid var(--border);
+}
+.bubble.ai { background: var(--surface); border-radius: 4px 12px 12px 12px; }
+.bubble.user { background: var(--blue); border-color: var(--blue); border-radius: 12px 4px 12px 12px; font-size: 13px; }
+
+.typing-row { display: flex; gap: 12px; }
+.dots { display: flex; gap: 5px; align-items: center; height: 20px; padding: 0 4px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); opacity: 0.6; animation: pulse 1.4s infinite; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%,80%,100%{transform:scale(0.7);opacity:0.3} 40%{transform:scale(1);opacity:1} }
+
+.quick-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 0 28px 16px;
+}
+.chip {
+  font-size: 11.5px; padding: 6px 13px; border-radius: 20px;
+  border: 1px solid var(--border2); color: var(--text2); background: var(--surface);
+  cursor: pointer; font-family: var(--sans); transition: all 0.15s; white-space: nowrap;
+}
+.chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-glow); }
+
+.input-bar {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.input-inner {
+  display: flex; gap: 10px; align-items: flex-end;
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 10px 12px;
+  transition: border-color 0.15s;
+}
+.input-inner:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+.input-inner textarea {
+  flex: 1; resize: none; background: none; border: none; outline: none;
+  color: var(--text); font-size: 13.5px; font-family: var(--sans);
+  line-height: 1.5; min-height: 22px; max-height: 120px;
+  caret-color: var(--blue);
+}
+.input-inner textarea::placeholder { color: var(--text3); }
+.send-btn {
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: var(--blue); border: none; border-radius: 8px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.send-btn:hover:not(:disabled) { background: #3d74ff; transform: scale(1.05); }
+.send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.send-btn svg { width: 15px; height: 15px; }
+
+/* ─── CODE PANEL ─── */
+.code-panel {
+  border-left: 1px solid var(--border);
+  background: #060a10;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.code-topbar {
+  padding: 0 16px; height: 44px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.file-tab {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11.5px; color: var(--text2);
+}
+.file-tab svg { width: 13px; height: 13px; opacity: 0.5; }
+.code-actions-bar { display: flex; gap: 6px; }
+.icon-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: none; border: 1px solid var(--border2);
+  color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: all 0.15s;
+}
+.icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+.icon-btn.success { background: rgba(0,230,118,0.1); border-color: rgba(0,230,118,0.3); color: var(--green); }
+
+.line-nums-wrap {
+  flex: 1; overflow-y: auto; display: flex;
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+}
+.line-nums-wrap::-webkit-scrollbar { width: 4px; }
+.line-nums-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.line-nums {
+  padding: 18px 0 18px 14px; color: var(--text3); text-align: right;
+  min-width: 36px; user-select: none; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+}
+.code-body { flex: 1; padding: 18px 18px 18px 16px; overflow-x: auto; min-width: 0; }
+.code-body pre { margin: 0; color: #c9d1d9; white-space: pre; }
+
+.empty-code {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: var(--text3); text-align: center; padding: 30px;
+}
+.empty-icon {
+  width: 52px; height: 52px; border-radius: 12px;
+  border: 1px dashed var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 4px;
+}
+.empty-code p { font-size: 12px; line-height: 1.6; }
+
+.code-footer {
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; gap: 10px; flex-shrink: 0;
+  background: var(--surface);
+}
+.stat {
+  display: flex; flex-direction: column; flex: 1;
+  background: var(--bg); border-radius: 7px; padding: 7px 10px;
+  border: 1px solid var(--border);
+}
+.stat-label { font-size: 9.5px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; font-family: var(--sans); }
+.stat-value { font-size: 14px; font-weight: 500; font-family: var(--mono); }
+.sv-blue { color: var(--blue); }
+.sv-green { color: var(--green); }
+.sv-amber { color: var(--amber); }
+.sv-cyan { color: var(--cyan); }
+
+/* ─── SYNTAX ─── */
+.kw { color: #ff7b72; }
+.fn { color: #d2a8ff; }
+.str { color: #a5d6ff; }
+.num { color: #79c0ff; }
+.cm  { color: #4a5f7a; font-style: italic; }
+.op  { color: #7fe6c4; }
+.var { color: #ffa657; }
+.bool { color: #ff7b72; }
+.type { color: #ffa657; }
+
+/* ─── SCROLLBAR global ─── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.msg-row { animation: fadeUp 0.25s ease both; }
+
+/* ─── MOBILE ─── */
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; grid-template-rows: 52px 1fr; }
+  .sidebar, .code-panel { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a class="brand" href="#">
+      <div class="brand-mark">
+        <svg viewBox="0 0 16 16" fill="white"><path d="M2 11 L8 2 L14 11 L11 11 L11 15 L5 15 L5 11Z"/></svg>
+      </div>
+      <div class="brand-name">Pine<span>AI</span></div>
+    </a>
+    <nav class="topbar-center">
+      <button class="tab active" onclick="setTab(this)">Генератор</button>
+      <button class="tab" onclick="setTab(this)">История</button>
+      <button class="tab" onclick="setTab(this)">Шаблоны</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="status-dot" title="API подключён"></div>
+      <button class="pill" onclick="clearChat()">Новый чат</button>
+      <button class="pill" id="downloadBtn" onclick="downloadCode()" style="display:none">↓ Скачать .pine</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <button class="new-btn" onclick="clearChat()">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 2v12M2 8h12" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        Новый скрипт
+      </button>
+      <div class="sidebar-label">Быстрый старт</div>
+      <div class="preset-list">
+        <div class="preset-item" onclick="usePreset('RSI индикатор с зонами 70/30 и сигналами')">
+          <span class="preset-icon">📈</span> RSI сигналы
+        </div>
+        <div class="preset-item" onclick="usePreset('Стратегия EMA crossover 9/21/50 с трейлинг стопом')">
+          <span class="preset-icon">⚡</span> EMA стратегия
+        </div>
+        <div class="preset-item" onclick="usePreset('Bollinger Bands с прорывами и объёмным фильтром')">
+          <span class="preset-icon">〰️</span> Bollinger Bands
+        </div>
+        <div class="preset-item" onclick="usePreset('MACD с гистограммой и дивергенцией')">
+          <span class="preset-icon">📊</span> MACD дивергенция
+        </div>
+        <div class="preset-item" onclick="usePreset('Супертренд индикатор с алертами и цветными свечами')">
+          <span class="preset-icon">🎯</span> Супертренд
+        </div>
+        <div class="preset-item" onclick="usePreset('VWAP с двумя стандартными отклонениями')">
+          <span class="preset-icon">💹</span> VWAP банды
+        </div>
+        <div class="preset-item" onclick="usePreset('Стохастик RSI с зонами перекупленности')">
+          <span class="preset-icon">🔄</span> Stoch RSI
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section" style="padding-bottom: 4px;">
+      <div class="sidebar-label">История</div>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-item" style="color: var(--text3); font-size:11px; padding: 6px 10px;">Пусто — начни чат ↑</div>
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <main class="chat-wrap">
+    <div class="messages" id="messages">
+      <div class="msg-row">
+        <div class="avatar ai">AI</div>
+        <div class="bubble ai">
+          Привет! Я генератор Pine Script v5 на базе AI.<br><br>
+          Опишите любой индикатор или торговую стратегию — напишу полный рабочий код с комментариями. Могу создавать с нуля, дорабатывать существующие скрипты и объяснять каждую строку.<br><br>
+          <strong>С чего начнём?</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-chips" id="chips">
+      <div class="chip" onclick="useChip(this)">RSI + EMA фильтр</div>
+      <div class="chip" onclick="useChip(this)">Стратегия с мани-менеджментом</div>
+      <div class="chip" onclick="useChip(this)">Свечные паттерны (молот, поглощение)</div>
+      <div class="chip" onclick="useChip(this)">Добавь фильтр объёма</div>
+      <div class="chip" onclick="useChip(this)">Добавь алерты к скрипту</div>
+      <div class="chip" onclick="useChip(this)">Объясни последний код</div>
+    </div>
+
+    <div class="input-bar">
+      <div class="input-inner">
+        <textarea id="inp" placeholder="Опиши индикатор или стратегию..." rows="1"
+          onkeydown="handleKey(event)" oninput="autoGrow(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="send()">
+          <svg viewBox="0 0 16 16" fill="white"><path d="M1.5 1.5 L14.5 8 L1.5 14.5 V9.5 L10 8 L1.5 6.5 Z"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- CODE PANEL -->
+  <aside class="code-panel" id="codePanel">
+    <div class="code-topbar">
+      <div class="file-tab">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M9 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V6l-5-5zm0 1.5L12.5 6H9V2.5z"/></svg>
+        <span id="fileName">script.pine</span>
+      </div>
+      <div class="code-actions-bar">
+        <button class="icon-btn" id="copyBtn" onclick="copyCode()" title="Копировать код" style="display:none">⎘</button>
+        <button class="icon-btn" id="dlBtn" onclick="downloadCode()" title="Скачать .pine" style="display:none">↓</button>
+      </div>
+    </div>
+
+    <div id="editorWrap" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+      <div class="empty-code" id="emptyState">
+        <div class="empty-icon">🌲</div>
+        <p>Сгенерированный Pine Script<br>появится здесь в реальном времени</p>
+      </div>
+      <div id="codeView" style="display:none; flex:1; overflow:hidden; display:none; flex-direction:row;">
+        <div class="line-nums" id="lineNums"></div>
+        <div class="line-nums-wrap" style="flex:1; overflow:auto;">
+          <div class="code-body"><pre id="codeBody"></pre></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-footer" id="codeFooter" style="display:none">
+      <div class="stat"><div class="stat-label">Строки</div><div class="stat-value sv-blue" id="sLines">—</div></div>
+      <div class="stat"><div class="stat-label">Тип</div><div class="stat-value sv-amber" id="sType">—</div></div>
+      <div class="stat"><div class="stat-label">Inputs</div><div class="stat-value sv-cyan" id="sInputs">—</div></div>
+      <div class="stat"><div class="stat-label">Версия</div><div class="stat-value sv-green" id="sVer">v5</div></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+let currentCode = '';
+let isLoading = false;
+let history = [];
+let sessionHistory = [];
+
+const SYSTEM = `Ты — эксперт Pine Script v5 для TradingView. Пишешь, улучшаешь и объясняешь торговые индикаторы и стратегии.
+
+ОБЯЗАТЕЛЬНЫЕ ПРАВИЛА:
+1. Код ВСЕГДА помещай в теги <PINESCRIPT>...</PINESCRIPT>
+2. Используй только Pine Script v5: //@version=5
+3. Добавляй input() параметры для настройки
+4. Пиши комментарии на русском внутри кода
+5. После тегов — краткое объяснение (3-5 предложений) на русском
+6. Код должен быть полным и рабочим
+7. Если просят улучшить/дополнить — модифицируй предыдущий скрипт
+
+Когда пишешь стратегию, добавляй управление капиталом.
+Для индикаторов — используй plot(), plotshape(), bgcolor() для визуализации.`;
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+}
+
+function setTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function useChip(el) {
+  document.getElementById('inp').value = el.textContent;
+  send();
+}
+
+function usePreset(text) {
+  document.getElementById('inp').value = text;
+  document.getElementById('inp').focus();
+  send();
+}
+
+function addMsg(role, html, isHTML) {
+  const wrap = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row' + (role === 'user' ? ' user' : '');
+  const av = document.createElement('div');
+  av.className = 'avatar ' + (role === 'user' ? 'user' : 'ai');
+  av.textContent = role === 'user' ? 'Вы' : 'AI';
+  const bbl = document.createElement('div');
+  bbl.className = 'bubble ' + (role === 'user' ? 'user' : 'ai');
+  if (isHTML) bbl.innerHTML = html; else bbl.textContent = html;
+  row.appendChild(av);
+  row.appendChild(bbl);
+  wrap.appendChild(row);
+  wrap.scrollTop = wrap.scrollHeight;
+  return bbl;
+}
+
+function showTyping() {
+  const wrap = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'typing-row'; row.id = 'typingRow';
+  row.innerHTML = `<div class="avatar ai">AI</div><div class="bubble ai"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  wrap.appendChild(row);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function hideTyping() { const t = document.getElementById('typingRow'); if (t) t.remove(); }
+
+function syntaxHL(code) {
+  const escaped = code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const lines = escaped.split('\n');
+  return lines.map(line => {
+    // comments first
+    const cmIdx = line.indexOf('//');
+    if (cmIdx !== -1) {
+      const before = line.slice(0, cmIdx);
+      const comment = line.slice(cmIdx);
+      return hlLine(before) + `<span class="cm">${comment}</span>`;
+    }
+    return hlLine(line);
+  }).join('\n');
+}
+
+function hlLine(line) {
+  // strings
+  line = line.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g, '<span class="str">$1</span>');
+  // numbers
+  line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+  // keywords
+  ['var','varip','if','else','for','while','switch','case','break','continue','return',
+   'not','and','or','import','export','type','method','series','simple','const',
+   'array','matrix','map','true','false','na'].forEach(kw => {
+    line = line.replace(new RegExp('\\b(' + kw + ')\\b', 'g'), '<span class="kw">$1</span>');
+  });
+  // builtins
+  ['indicator','strategy','plot','plotshape','plotchar','alertcondition','alert',
+   'bgcolor','barcolor','fill','hline','input','request','ta','math','str','color',
+   'syminfo','timeframe','chart','line','label','box','table','array','close','open',
+   'high','low','volume','bar_index','time','nz','fixnan','math\\.round','math\\.abs',
+   'math\\.max','math\\.min','ta\\.rsi','ta\\.ema','ta\\.sma','ta\\.wma','ta\\.macd',
+   'ta\\.bb','ta\\.atr','ta\\.stoch','ta\\.crossover','ta\\.crossunder','ta\\.highest',
+   'ta\\.lowest','strategy\\.entry','strategy\\.exit','strategy\\.close'].forEach(fn => {
+    line = line.replace(new RegExp('\\b(' + fn + ')\\b', 'g'), '<span class="fn">$1</span>');
+  });
+  return line;
+}
+
+function renderCode(code) {
+  currentCode = code;
+  const lines = code.split('\n');
+  const lineCount = lines.length;
+  const inputCount = (code.match(/\binput\b/g) || []).length;
+  const isStrategy = /strategy\s*\(/.test(code);
+  const scriptName = (code.match(/(?:indicator|strategy)\s*\(\s*['"]([^'"]+)['"]/) || [])[1];
+
+  document.getElementById('emptyState').style.display = 'none';
+  const cv = document.getElementById('codeView');
+  cv.style.display = 'flex';
+  cv.style.flexDirection = 'row';
+
+  document.getElementById('codeBody').innerHTML = syntaxHL(code);
+  document.getElementById('lineNums').innerHTML = lines.map((_, i) => i + 1).join('<br>');
+  document.getElementById('fileName').textContent = scriptName ? scriptName + '.pine' : (isStrategy ? 'strategy.pine' : 'indicator.pine');
+
+  document.getElementById('sLines').textContent = lineCount;
+  document.getElementById('sType').textContent = isStrategy ? 'Strategy' : 'Indicator';
+  document.getElementById('sInputs').textContent = inputCount;
+  document.getElementById('codeFooter').style.display = 'flex';
+
+  document.getElementById('copyBtn').style.display = 'flex';
+  document.getElementById('dlBtn').style.display = 'flex';
+  document.getElementById('downloadBtn').style.display = 'block';
+}
+
+function copyCode() {
+  if (!currentCode) return;
+  navigator.clipboard.writeText(currentCode).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('success');
+    btn.textContent = '✓';
+    setTimeout(() => { btn.classList.remove('success'); btn.textContent = '⎘'; }, 1800);
+  });
+}
+
+function downloadCode() {
+  if (!currentCode) return;
+  const name = document.getElementById('fileName').textContent || 'script.pine';
+  const blob = new Blob([currentCode], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+
+function clearChat() {
+  document.getElementById('messages').innerHTML = `
+    <div class="msg-row">
+      <div class="avatar ai">AI</div>
+      <div class="bubble ai">Новый чат начат. Опишите индикатор или стратегию для генерации Pine Script v5.</div>
+    </div>`;
+  sessionHistory = [];
+  currentCode = '';
+  document.getElementById('emptyState').style.display = 'flex';
+  document.getElementById('codeView').style.display = 'none';
+  document.getElementById('codeFooter').style.display = 'none';
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('dlBtn').style.display = 'none';
+  document.getElementById('downloadBtn').style.display = 'none';
+}
+
+function addToHistory(text) {
+  const hl = document.getElementById('historyList');
+  if (hl.querySelector('.history-item[data-empty]')) hl.innerHTML = '';
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.textContent = '↳ ' + text.slice(0, 38) + (text.length > 38 ? '…' : '');
+  item.onclick = () => { document.getElementById('inp').value = text; };
+  hl.prepend(item);
+}
+
+async function send() {
+  if (isLoading) return;
+  const inp = document.getElementById('inp');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  inp.value = ''; inp.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  addMsg('user', text);
+  addToHistory(text);
+
+  let userContent = text;
+  if (currentCode) userContent += '\n\nТекущий скрипт:\n```\n' + currentCode + '\n```';
+
+  sessionHistory.push({ role: 'user', content: userContent });
+  showTyping();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: SYSTEM,
+        messages: sessionHistory
+      })
+    });
+    const data = await res.json();
+    const full = data.content.map(c => c.text || '').join('');
+    sessionHistory.push({ role: 'assistant', content: full });
+
+    const codeM = full.match(/<PINESCRIPT>([\s\S]*?)<\/PINESCRIPT>/);
+    const explanation = full.replace(/<PINESCRIPT>[\s\S]*?<\/PINESCRIPT>/g, '').trim();
+
+    hideTyping();
+
+    if (codeM) renderCode(codeM[1].trim());
+
+    const msg = explanation || (codeM ? 'Скрипт готов! Скопируй код и вставь в TradingView → Pine Editor.' : 'Готово!');
+    addMsg('ai', msg.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'), true);
+
+  } catch(e) {
+    hideTyping();
+    addMsg('ai', 'Ошибка соединения с API. Проверьте подключение и попробуйте снова.');
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+</script>
+</body>
+</html>
